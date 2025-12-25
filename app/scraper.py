@@ -1,7 +1,7 @@
-import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
-from .config import UNTAPPD_VENUE_URL, REQUEST_HEADERS
+from .config import UNTAPPD_VENUE_URL
 
 
 def scrape_beers() -> List[Dict[str, str]]:
@@ -10,9 +10,16 @@ def scrape_beers() -> List[Dict[str, str]]:
     Returns a list of beer dictionaries.
     """
     try:
-        response = requests.get(UNTAPPD_VENUE_URL, headers=REQUEST_HEADERS, timeout=15)
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'firefox',
+                'platform': 'windows',
+                'mobile': False
+            }
+        )
+        response = scraper.get(UNTAPPD_VENUE_URL, timeout=15)
         response.raise_for_status()
-    except requests.RequestException as e:
+    except Exception as e:
         print(f"Error fetching Untappd page: {e}")
         return []
 
