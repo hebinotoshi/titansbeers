@@ -106,6 +106,11 @@ def reply_message(reply_token: str, message: Dict[str, Any]) -> bool:
 
 def process_webhook(body: Dict[str, Any]) -> None:
     """Process the webhook body and handle all events."""
+    import json
+    print(f"=== WEBHOOK RECEIVED ===")
+    print(json.dumps(body, indent=2, ensure_ascii=False))
+    print(f"========================")
+
     events = body.get("events", [])
 
     for event in events:
