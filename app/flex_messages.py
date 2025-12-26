@@ -25,6 +25,16 @@ def build_beer_carousel(beers: List[Dict[str, str]]) -> Dict[str, Any]:
     bubbles = []
 
     for beer in beers:
+        # Create postback data for saving beer
+        save_data = json.dumps({
+            "action": "save_beer",
+            "name": beer.get("name", ""),
+            "brewery": beer.get("brewery", ""),
+            "style": beer.get("style", ""),
+            "abv": beer.get("abv", ""),
+            "rating": beer.get("rating", ""),
+        })
+
         bubble = {
             "type": "bubble",
             "size": "kilo",
@@ -96,9 +106,27 @@ def build_beer_carousel(beers: List[Dict[str, str]]) -> Dict[str, Any]:
                 "spacing": "sm",
                 "paddingAll": "13px",
             },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "postback",
+                            "label": "⭐ Save to My List",
+                            "data": save_data,
+                            "displayText": f"Saving {trim_string(beer.get('name', ''), 20)}...",
+                        },
+                        "style": "primary",
+                        "color": "#FFC107",
+                        "height": "sm",
+                    }
+                ],
+            },
             "styles": {
                 "header": {"separator": False},
-                "footer": {"separator": False},
+                "footer": {"separator": True},
             },
         }
         bubbles.append(bubble)
