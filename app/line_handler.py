@@ -104,6 +104,40 @@ def reply_message(reply_token: str, message: Dict[str, Any]) -> bool:
         return False
 
 
+def handle_postback(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Handle postback events (button clicks)."""
+    import json
+
+    postback = event.get("postback", {})
+    data_str = postback.get("data", "")
+
+    try:
+        data = json.loads(data_str)
+    except json.JSONDecodeError:
+        return None
+
+    action = data.get("action")
+    user_id = event.get("source", {}).get("userId", "")
+
+    if action == "save_beer":
+        beer_name = data.get("name", "Unknown")
+        brewery = data.get("brewery", "")
+
+        # TODO: Save to database
+        print(f"=== SAVE BEER REQUEST ===")
+        print(f"User: {user_id}")
+        print(f"Beer: {beer_name} by {brewery}")
+        print(f"========================")
+
+        # For now, just confirm the save
+        return {
+            "type": "text",
+            "text": f"⭐ Saved '{beer_name}' to your list!\n\nType 'my beers' to see your saved beers."
+        }
+
+    return None
+
+
 def process_webhook(body: Dict[str, Any]) -> None:
     """Process the webhook body and handle all events."""
     import json
@@ -114,13 +148,18 @@ def process_webhook(body: Dict[str, Any]) -> None:
     events = body.get("events", [])
 
     for event in events:
-        if event.get("type") != "message":
-            continue
-
+        event_type = event.get("type")
         reply_token = event.get("replyToken")
+
         if not reply_token:
             continue
 
-        response_message = handle_message(event)
+        response_message = None
+
+        if event_type == "message":
+            response_message = handle_message(event)
+        elif event_type == "postback":
+            response_message = handle_postback(event)
+
         if response_message:
             reply_message(reply_token, response_message)
