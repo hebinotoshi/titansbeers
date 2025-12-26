@@ -103,15 +103,72 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                 "text": "You haven't saved any beers yet!\n\nType 'beer' to see the menu and save your favorites."
             }
 
-        # Build a text list of saved beers
-        beer_list = "⭐ Your Saved Beers:\n\n"
-        for i, beer in enumerate(beers[:10], 1):  # Limit to 10
-            beer_list += f"{i}. {beer['beer_name']}\n"
-            beer_list += f"   {beer['brewery']} • {beer['abv']}\n\n"
+        # Build carousel of saved beers
+        bubbles = []
+        for beer in beers[:10]:  # Limit to 10
+            bubble = {
+                "type": "bubble",
+                "size": "kilo",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": beer.get("beer_name", "Unknown"),
+                            "weight": "bold",
+                            "size": "lg",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "text",
+                            "text": beer.get("brewery", ""),
+                            "color": "#8c8c8c",
+                            "size": "md",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "text",
+                            "text": beer.get("style", ""),
+                            "size": "sm",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": f"ABV: {beer.get('abv', '')}",
+                                    "size": "xs",
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"Rating: {beer.get('rating', '')}",
+                                    "size": "xs",
+                                    "align": "end",
+                                },
+                            ],
+                            "margin": "md",
+                        },
+                        {
+                            "type": "text",
+                            "text": f"Saved: {beer.get('saved_at', '')[:10]}",
+                            "size": "xs",
+                            "color": "#aaaaaa",
+                            "margin": "md",
+                        },
+                    ],
+                    "spacing": "sm",
+                    "paddingAll": "13px",
+                },
+            }
+            bubbles.append(bubble)
 
         return {
-            "type": "text",
-            "text": beer_list.strip()
+            "type": "flex",
+            "altText": "⭐ Your Saved Beers",
+            "contents": {"type": "carousel", "contents": bubbles},
         }
 
     except Exception as e:
