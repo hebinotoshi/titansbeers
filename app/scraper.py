@@ -1,7 +1,10 @@
-import cloudscraper
+import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
-from .config import UNTAPPD_VENUE_URL
+import re
+
+# Venue URL for Titans Craft Beer Bar
+VENUE_URL = "https://untappd.com/v/titans-craft-beer-bar-and-bottle-shop/5286704"
 
 
 def scrape_beers() -> List[Dict[str, str]]:
@@ -9,103 +12,101 @@ def scrape_beers() -> List[Dict[str, str]]:
     Scrape beer information from Untappd venue page.
     Returns a list of beer dictionaries.
     """
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,ja;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"macOS"',
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Upgrade-Insecure-Requests": "1",
+    }
+
     try:
-        scraper = cloudscraper.create_scraper(
-            browser={
-                'browser': 'firefox',
-                'platform': 'windows',
-                'mobile': False
-            }
-        )
-        response = scraper.get(UNTAPPD_VENUE_URL, timeout=15)
+        session = requests.Session()
+        response = session.get(VENUE_URL, headers=headers, timeout=20)
         response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        beer_items = soup.select("li.menu-item")
+
+        beers = []
+        for item in beer_items:
+            beer_info = _parse_html_beer(item)
+            if beer_info:
+                beers.append(beer_info)
+
+        return beers
+
     except Exception as e:
         print(f"Error fetching Untappd page: {e}")
         return []
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    beer_elements = soup.select(".menu-section-list li")
 
-    beers = []
-    for beer in beer_elements:
-        try:
-            beer_info = _parse_beer_element(beer)
-            if beer_info:
-                beers.append(beer_info)
-        except Exception as e:
-            print(f"Error parsing beer element: {e}")
-            continue
+def _parse_html_beer(item) -> Optional[Dict[str, str]]:
+    """Parse beer from HTML li element."""
+    try:
+        # Beer name and link
+        name_link = item.select_one("h5 a.track-click")
+        if not name_link:
+            return None
 
-    return beers
+        name = name_link.text.strip()
+        # Remove leading number (e.g., "1. Observable World" -> "Observable World")
+        name = re.sub(r'^\d+\.\s*', '', name)
 
+        href = name_link.get("href", "")
+        check_in = f"https://untappd.com{href}" if href else "https://untappd.com"
 
-def _parse_beer_element(beer) -> Optional[Dict[str, str]]:
-    """Parse a single beer element and return beer info dict."""
-    # Name and check-in link
-    name_element = beer.select_one(".track-click")
-    if not name_element:
-        return None
+        # Style
+        style_em = item.select_one("h5 em")
+        style = style_em.text.strip() if style_em else ""
 
-    name = name_element.text.strip()
-    href = name_element.get("href", "")
-    check_in = f"https://untappd.com{href}" if href else ""
+        # Brewery
+        brewery_link = item.select_one("h6 a.track-click")
+        brewery = brewery_link.text.strip() if brewery_link else ""
 
-    # Strip leading number from name (e.g., "1. IPA Name" -> "IPA Name")
-    if "." in name:
-        name = name.split(".", 1)[1].strip()
+        # ABV - extract from h6 span text
+        h6 = item.select_one("h6")
+        abv = ""
+        if h6:
+            h6_text = h6.get_text()
+            abv_match = re.search(r'([\d.]+)%\s*ABV', h6_text)
+            if abv_match:
+                abv = f"{abv_match.group(1)}%"
 
-    # Brewery
-    brewery = ""
-    h6_element = beer.find("h6")
-    if h6_element:
-        brewery_link = h6_element.find("a")
-        if brewery_link:
-            brewery = brewery_link.text.strip()
+        # Rating
+        rating = ""
+        rating_span = item.select_one("span.num")
+        if rating_span:
+            rating_text = rating_span.text.strip()
+            rating = rating_text.strip("()")
 
-    # Style
-    style = ""
-    h5_element = beer.find("h5")
-    if h5_element:
-        style_em = h5_element.find("em")
-        if style_em:
-            style = style_em.text.strip()
-
-    # ABV
-    abv = ""
-    if h6_element:
-        abv_span = h6_element.find("span")
-        if abv_span:
-            abv_text = abv_span.text.strip()
-            abv = abv_text.split("\n")[0].strip()
-
-    # Label image
-    label = ""
-    label_div = beer.find("div", class_="beer-label")
-    if label_div:
-        img = label_div.find("img")
+        # Label image
+        label = ""
+        img = item.select_one(".beer-label img")
         if img:
             label = img.get("src", "")
 
-    # Rating
-    rating = ""
-    rating_div = beer.find("div", class_="caps small")
-    if rating_div:
-        data_rating = rating_div.get("data-rating", "")
-        if data_rating:
-            try:
-                rating = str(round(float(data_rating), 2))
-            except ValueError:
-                rating = data_rating
-
-    return {
-        "name": name,
-        "brewery": brewery,
-        "style": style,
-        "abv": abv,
-        "label": label,
-        "rating": rating,
-        "check_in": check_in,
-    }
+        return {
+            "name": name,
+            "brewery": brewery,
+            "style": style,
+            "abv": abv,
+            "label": label,
+            "rating": rating,
+            "check_in": check_in,
+        }
+    except Exception as e:
+        print(f"Error parsing beer: {e}")
+        return None
 
 
 def trim_string(s: str, max_length: int = 40) -> str:
