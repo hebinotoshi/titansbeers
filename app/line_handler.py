@@ -13,6 +13,7 @@ from .config import (
     HAGEHIGE_TRIGGERS,
     YURIE_TRIGGERS,
     ADAM_TRIGGERS,
+    MY_BEERS_TRIGGERS,
 )
 from .scraper import scrape_beers
 from .flex_messages import (
@@ -25,6 +26,7 @@ from .flex_messages import (
 
 
 LINE_REPLY_URL = "https://api.line.me/v2/bot/message/reply"
+SCRAPER_API_URL = "http://159.13.59.218:5000"
 
 
 def verify_signature(body: bytes, signature: str) -> bool:
@@ -80,7 +82,44 @@ def handle_message(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if text in ADAM_TRIGGERS:
         return build_personal_message("adam")
 
+    # My beers command
+    if text in MY_BEERS_TRIGGERS:
+        user_id = event.get("source", {}).get("userId", "")
+        return get_saved_beers(user_id)
+
     return None
+
+
+def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
+    """Get user's saved beers from Oracle API."""
+    try:
+        response = requests.get(f"{SCRAPER_API_URL}/mybeers/{user_id}", timeout=10)
+        response.raise_for_status()
+        beers = response.json()
+
+        if not beers:
+            return {
+                "type": "text",
+                "text": "You haven't saved any beers yet!\n\nType 'beer' to see the menu and save your favorites."
+            }
+
+        # Build a text list of saved beers
+        beer_list = "⭐ Your Saved Beers:\n\n"
+        for i, beer in enumerate(beers[:10], 1):  # Limit to 10
+            beer_list += f"{i}. {beer['beer_name']}\n"
+            beer_list += f"   {beer['brewery']} • {beer['abv']}\n\n"
+
+        return {
+            "type": "text",
+            "text": beer_list.strip()
+        }
+
+    except Exception as e:
+        print(f"Error getting saved beers: {e}")
+        return {
+            "type": "text",
+            "text": "Sorry, couldn't load your saved beers. Try again later."
+        }
 
 
 def reply_message(reply_token: str, message: Dict[str, Any]) -> bool:
@@ -122,14 +161,33 @@ def handle_postback(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if action == "save_beer":
         beer_name = data.get("name", "Unknown")
         brewery = data.get("brewery", "")
+        style = data.get("style", "")
+        abv = data.get("abv", "")
+        rating = data.get("rating", "")
 
-        # TODO: Save to database
-        print(f"=== SAVE BEER REQUEST ===")
-        print(f"User: {user_id}")
-        print(f"Beer: {beer_name} by {brewery}")
-        print(f"========================")
+        # Save to database via Oracle API
+        try:
+            save_response = requests.post(
+                f"{SCRAPER_API_URL}/save",
+                json={
+                    "user_id": user_id,
+                    "beer_name": beer_name,
+                    "brewery": brewery,
+                    "style": style,
+                    "abv": abv,
+                    "rating": rating,
+                },
+                timeout=10
+            )
+            save_response.raise_for_status()
+            print(f"Saved beer '{beer_name}' for user {user_id}")
+        except Exception as e:
+            print(f"Error saving beer: {e}")
+            return {
+                "type": "text",
+                "text": f"Sorry, couldn't save the beer. Try again later."
+            }
 
-        # For now, just confirm the save
         return {
             "type": "text",
             "text": f"⭐ Saved '{beer_name}' to your list!\n\nType 'my beers' to see your saved beers."
