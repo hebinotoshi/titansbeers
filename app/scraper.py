@@ -2,9 +2,20 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Optional
 import re
+import os
 
 # Venue URL for Titans Craft Beer Bar
 VENUE_URL = "https://untappd.com/v/titans-craft-beer-bar-and-bottle-shop/5286704"
+
+# Free proxy services to try
+PROXY_SERVICES = [
+    # WebScrapingAPI free tier
+    "https://api.webscrapingapi.com/v1?api_key=free&url=",
+    # AllOrigins (CORS proxy that also works for scraping)
+    "https://api.allorigins.win/raw?url=",
+    # corsproxy.io
+    "https://corsproxy.io/?",
+]
 
 
 def scrape_beers() -> List[Dict[str, str]]:
@@ -16,38 +27,50 @@ def scrape_beers() -> List[Dict[str, str]]:
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9,ja;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"macOS"',
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
     }
 
-    try:
-        session = requests.Session()
-        response = session.get(VENUE_URL, headers=headers, timeout=20)
-        response.raise_for_status()
+    # Try direct request first
+    html_content = None
 
-        soup = BeautifulSoup(response.text, "html.parser")
-        beer_items = soup.select("li.menu-item")
+    # Try each proxy service
+    for proxy_base in PROXY_SERVICES:
+        try:
+            proxy_url = f"{proxy_base}{VENUE_URL}"
+            print(f"Trying proxy: {proxy_base[:40]}...")
+            response = requests.get(proxy_url, headers=headers, timeout=20)
+            if response.status_code == 200 and "menu-item" in response.text:
+                html_content = response.text
+                print(f"Success with proxy!")
+                break
+        except Exception as e:
+            print(f"Proxy failed: {e}")
+            continue
 
-        beers = []
-        for item in beer_items:
-            beer_info = _parse_html_beer(item)
-            if beer_info:
-                beers.append(beer_info)
+    # If all proxies fail, try direct (might work in some cases)
+    if not html_content:
+        try:
+            print("Trying direct request...")
+            response = requests.get(VENUE_URL, headers=headers, timeout=20)
+            if response.status_code == 200:
+                html_content = response.text
+        except Exception as e:
+            print(f"Direct request failed: {e}")
 
-        return beers
-
-    except Exception as e:
-        print(f"Error fetching Untappd page: {e}")
+    if not html_content:
+        print("All methods failed to fetch Untappd page")
         return []
+
+    # Parse the HTML
+    soup = BeautifulSoup(html_content, "html.parser")
+    beer_items = soup.select("li.menu-item")
+
+    beers = []
+    for item in beer_items:
+        beer_info = _parse_html_beer(item)
+        if beer_info:
+            beers.append(beer_info)
+
+    return beers
 
 
 def _parse_html_beer(item) -> Optional[Dict[str, str]]:
