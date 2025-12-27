@@ -92,6 +92,8 @@ def handle_message(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
     """Get user's saved beers from Oracle API."""
+    import json
+
     try:
         response = requests.get(f"{SCRAPER_API_URL}/mybeers/{user_id}", timeout=10)
         response.raise_for_status()
@@ -106,9 +108,22 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
         # Build carousel of saved beers
         bubbles = []
         for beer in beers[:10]:  # Limit to 10
+            delete_data = json.dumps({
+                "action": "delete_beer",
+                "id": beer.get("id"),
+                "name": beer.get("beer_name", "")
+            })
+
             bubble = {
                 "type": "bubble",
                 "size": "kilo",
+                "hero": {
+                    "type": "image",
+                    "url": beer.get("label", "") or "https://assets.untappd.com/site/assets/images/temp/badge-beer-default.png",
+                    "size": "full",
+                    "aspectMode": "cover",
+                    "aspectRatio": "1:1",
+                },
                 "body": {
                     "type": "box",
                     "layout": "vertical",
@@ -153,7 +168,7 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                         },
                         {
                             "type": "text",
-                            "text": f"Saved: {beer.get('saved_at', '')[:10]}",
+                            "text": f"Saved: {beer.get('saved_at', '')}",
                             "size": "xs",
                             "color": "#aaaaaa",
                             "margin": "md",
@@ -161,6 +176,23 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                     ],
                     "spacing": "sm",
                     "paddingAll": "13px",
+                },
+                "footer": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "action": {
+                                "type": "postback",
+                                "label": "🗑️ Delete",
+                                "data": delete_data,
+                                "displayText": f"Deleting {beer.get('beer_name', '')[:20]}...",
+                            },
+                            "style": "secondary",
+                            "height": "sm",
+                        }
+                    ],
                 },
             }
             bubbles.append(bubble)
@@ -221,6 +253,7 @@ def handle_postback(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         style = data.get("style", "")
         abv = data.get("abv", "")
         rating = data.get("rating", "")
+        label = data.get("label", "")
 
         # Save to database via Oracle API
         try:
@@ -233,6 +266,7 @@ def handle_postback(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     "style": style,
                     "abv": abv,
                     "rating": rating,
+                    "label": label,
                 },
                 timeout=10
             )
@@ -248,6 +282,33 @@ def handle_postback(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return {
             "type": "text",
             "text": f"⭐ Saved '{beer_name}' to your list!\n\nType 'my beers' to see your saved beers."
+        }
+
+    if action == "delete_beer":
+        beer_id = data.get("id")
+        beer_name = data.get("name", "Unknown")
+
+        try:
+            delete_response = requests.post(
+                f"{SCRAPER_API_URL}/delete",
+                json={
+                    "id": beer_id,
+                    "user_id": user_id,
+                },
+                timeout=10
+            )
+            delete_response.raise_for_status()
+            print(f"Deleted beer '{beer_name}' for user {user_id}")
+        except Exception as e:
+            print(f"Error deleting beer: {e}")
+            return {
+                "type": "text",
+                "text": f"Sorry, couldn't delete the beer. Try again later."
+            }
+
+        return {
+            "type": "text",
+            "text": f"🗑️ Deleted '{beer_name}' from your list."
         }
 
     return None
