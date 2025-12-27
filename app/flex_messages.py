@@ -102,9 +102,10 @@ def build_beer_carousel(beers: List[Dict[str, str]]) -> Dict[str, Any]:
                         },
                         "gravity": "bottom",
                         "height": "sm",
+                        "margin": "md",
                     },
                 ],
-                "spacing": "sm",
+                "spacing": "none",
                 "paddingAll": "13px",
             },
             "footer": {
