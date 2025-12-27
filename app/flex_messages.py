@@ -33,6 +33,7 @@ def build_beer_carousel(beers: List[Dict[str, str]]) -> Dict[str, Any]:
             "style": beer.get("style", ""),
             "abv": beer.get("abv", ""),
             "rating": beer.get("rating", ""),
+            "label": beer.get("label", ""),
         })
 
         bubble = {
