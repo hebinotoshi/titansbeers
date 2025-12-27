@@ -2,7 +2,7 @@ import requests
 from typing import List, Dict
 
 # Oracle Cloud scraper API
-SCRAPER_API_URL = "http://159.13.59.218:5000"
+SCRAPER_API_URL = "http://140.238.197.186:5000"
 
 
 def scrape_beers() -> List[Dict[str, str]]:
