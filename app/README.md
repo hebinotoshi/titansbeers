@@ -353,17 +353,6 @@ This is why we use Oracle VM - Render's IPs are blocked but Oracle's residential
 - Use ARM shape with 6GB RAM instead of AMD with 512MB
 - Or add swap space (see setup instructions)
 
-## Line Credentials
-
-- **Channel ID**: 1657152840
-- **Channel Secret**: a3f5bdfb7f239e6ec9ade2ef427f5e21
-- **Channel Access Token**: IZMOX281n/l9hxw6kC/hdvQWuTJI730qJl3EPUSjI+pf3RCPyQd4SxH7OSMQmFGNMIk8zfT8DlnJTJHAmvM+i0lCdxsN9L6+C/I9av/+s8CrxCnLd4WOoTztrRqcVJKZZO4hS8wNYdWsJXp9/ttIKQdB04t89/1O/w1cDnyilFU=
-
-## Oracle VM Info
-
-- **Public IP**: 140.238.197.186
-- **SSH**: `ssh -i oracle-arm.key opc@140.238.197.186`
-- **Scraper URL**: http://140.238.197.186:5000
 
 ## URLs
 
