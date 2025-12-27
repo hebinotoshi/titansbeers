@@ -134,11 +134,12 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                             "weight": "bold",
                             "size": "lg",
                             "wrap": True,
+                            "color": "#FFFFFF",
                         },
                         {
                             "type": "text",
                             "text": beer.get("brewery", ""),
-                            "color": "#8c8c8c",
+                            "color": "#AAAAAA",
                             "size": "md",
                             "wrap": True,
                         },
@@ -147,6 +148,7 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                             "text": beer.get("style", ""),
                             "size": "sm",
                             "wrap": True,
+                            "color": "#CCCCCC",
                         },
                         {
                             "type": "box",
@@ -156,12 +158,14 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                                     "type": "text",
                                     "text": f"ABV: {beer.get('abv', '')}",
                                     "size": "xs",
+                                    "color": "#CCCCCC",
                                 },
                                 {
                                     "type": "text",
                                     "text": f"Rating: {beer.get('rating', '')}",
                                     "size": "xs",
                                     "align": "end",
+                                    "color": "#CCCCCC",
                                 },
                             ],
                             "margin": "md",
@@ -170,12 +174,13 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                             "type": "text",
                             "text": f"Saved: {beer.get('saved_at', '')}",
                             "size": "xs",
-                            "color": "#aaaaaa",
+                            "color": "#888888",
                             "margin": "md",
                         },
                     ],
                     "spacing": "sm",
                     "paddingAll": "13px",
+                    "backgroundColor": "#333333",
                 },
                 "footer": {
                     "type": "box",
@@ -193,6 +198,11 @@ def get_saved_beers(user_id: str) -> Optional[Dict[str, Any]]:
                             "height": "sm",
                         }
                     ],
+                    "backgroundColor": "#333333",
+                    "paddingTop": "5px",
+                },
+                "styles": {
+                    "hero": {"backgroundColor": "#333333"},
                 },
             }
             bubbles.append(bubble)
