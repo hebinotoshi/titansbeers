@@ -26,7 +26,7 @@ from .flex_messages import (
 
 
 LINE_REPLY_URL = "https://api.line.me/v2/bot/message/reply"
-SCRAPER_API_URL = "http://159.13.59.218:5000"
+SCRAPER_API_URL = "http://140.238.197.186:5000"
 
 
 def verify_signature(body: bytes, signature: str) -> bool:
